@@ -317,21 +317,18 @@ async function fetchRssFeed(feed) {
 async function enrichItem(item) {
 
   const text =
-  `${item.title || ''} ${item.snippet || ''}`;
+    `${item.title || ''} ${item.snippet || ''}`;
 
   const location =
     extractPlace(text);
 
   const geo =
-    GEO[location] || {
-      lat: 0,
-      lng: 0
-    };
+    GEO[location] || GEO['USA'];
 
   return {
 
     id: slugHash(
-      `${item.title}-${location || 'unknown'}`
+      `${item.title}-${location}`
     ),
 
     title: item.title,
@@ -342,11 +339,9 @@ async function enrichItem(item) {
 
     publishedAt: item.publishedAt,
 
-    location:
-      location || 'Unknown',
+    location,
 
-    displayName:
-      location || 'Unknown',
+    displayName: location,
 
     lat: geo.lat,
 
@@ -356,11 +351,9 @@ async function enrichItem(item) {
 
     risk: extractRisk(text),
 
-    summary: cleanText(text)
-      .slice(0, 220)
+    summary: cleanText(text).slice(0, 220)
   };
 }
-
 // =========================
 // REFRESH
 // =========================
