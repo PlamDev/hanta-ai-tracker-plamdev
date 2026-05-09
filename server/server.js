@@ -58,20 +58,25 @@ const state = {
 // =========================
 
 const FEEDS = [
-  {
+ {
     name: 'Google News Hantavirus',
     type: 'rss',
-    url: 'https://news.google.com/rss/search?q=hantavirus'
+    url: 'https://news.google.com/rss/search?q=hantavirus+outbreak'
+  },
+  {
+    name: 'Google News Virus',
+    type: 'rss',
+    url: 'https://news.google.com/rss/search?q=virus+outbreak'
+  },
+  {
+    name: 'Google News Epidemic',
+    type: 'rss',
+    url: 'https://news.google.com/rss/search?q=epidemic'
   },
   {
     name: 'WHO News',
     type: 'rss',
     url: 'https://www.who.int/rss-feeds/news-english.xml'
-  },
-  {
-    name: 'Google News Virus Outbreak',
-    type: 'rss',
-    url: 'https://news.google.com/rss/search?q=virus+outbreak'
   }
 ];
 
@@ -188,29 +193,45 @@ function extractPlace(text) {
 
   const normalized = cleanText(text);
 
-  for (const place of KNOWN_PLACES) {
+  const places = [
+    'China',
+    'USA',
+    'United States',
+    'Canada',
+    'Mexico',
+    'Brazil',
+    'Argentina',
+    'Chile',
+    'Peru',
+    'Vietnam',
+    'Japan',
+    'Tokyo',
+    'Seoul',
+    'Taiwan',
+    'Thailand',
+    'Germany',
+    'France',
+    'Italy',
+    'Spain',
+    'London',
+    'England',
+    'Russia',
+    'India'
+  ];
 
-    const regex = new RegExp(
-      `\\b${place.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
-      'i'
-    );
+  for (const place of places) {
 
-    if (regex.test(normalized)) {
+    if (
+      normalized
+        .toLowerCase()
+        .includes(place.toLowerCase())
+    ) {
       return place;
     }
   }
 
-  const fallback = normalized.match(
-    /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b/
-  );
-
-  if (fallback) {
-    return fallback[1];
-  }
-
-  return null;
+  return 'USA';
 }
-
 function articleSummary(item) {
 
   return cleanText(
@@ -224,25 +245,45 @@ function articleSummary(item) {
 
 async function fetchRssFeed(feed) {
 
-  const parsed =
-    await parser.parseURL(feed.url);
+  try {
 
-  return (parsed.items || [])
-    .slice(0, 20)
-    .map((item) => ({
-      title: cleanText(item.title),
-      url: item.link,
-      publishedAt:
-        item.isoDate ||
-        item.pubDate ||
-        null,
-      snippet: cleanText(
-        item.contentSnippet ||
-        item.summary ||
-        ''
-      ),
-      source: feed.name
-    }));
+    const res = await fetch(feed.url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0'
+      }
+    });
+
+    const xml = await res.text();
+
+    const parsed = await parser.parseString(xml);
+
+    return (parsed.items || [])
+      .slice(0, 20)
+      .map((item) => ({
+        title: cleanText(item.title),
+        url: item.link,
+        publishedAt:
+          item.isoDate ||
+          item.pubDate ||
+          null,
+        snippet: cleanText(
+          item.contentSnippet ||
+          item.content ||
+          item.summary ||
+          ''
+        ),
+        source: feed.name
+      }));
+
+  } catch (err) {
+
+    console.log(
+      'RSS FETCH ERROR:',
+      err.message
+    );
+
+    return [];
+  }
 }
 
 // =========================
