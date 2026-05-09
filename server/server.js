@@ -317,7 +317,7 @@ async function fetchRssFeed(feed) {
 async function enrichItem(item) {
 
   const text =
-    `${item.title} ${item.snippet}`;
+  `${item.title || ''} ${item.snippet || ''}`;
 
   const location =
     extractPlace(text);
