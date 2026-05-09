@@ -1,3 +1,4 @@
+```js
 const express = require('express');
 const cors = require('cors');
 const Parser = require('rss-parser');
@@ -98,6 +99,56 @@ const GEO = {
   India: {
     lat: 20.5937,
     lng: 78.9629
+  },
+
+  Spain: {
+    lat: 40.4637,
+    lng: -3.7492
+  },
+
+  Italy: {
+    lat: 41.8719,
+    lng: 12.5674
+  },
+
+  Australia: {
+    lat: -25.2744,
+    lng: 133.7751
+  },
+
+  Mexico: {
+    lat: 23.6345,
+    lng: -102.5528
+  },
+
+  Argentina: {
+    lat: -38.4161,
+    lng: -63.6167
+  },
+
+  Chile: {
+    lat: -35.6751,
+    lng: -71.5430
+  },
+
+  Peru: {
+    lat: -9.1900,
+    lng: -75.0152
+  },
+
+  Taiwan: {
+    lat: 23.6978,
+    lng: 120.9605
+  },
+
+  Thailand: {
+    lat: 15.8700,
+    lng: 100.9925
+  },
+
+  Sudan: {
+    lat: 12.8628,
+    lng: 30.2176
   }
 };
 
@@ -167,20 +218,51 @@ function extractRisk(text) {
 
 function extractPlace(text) {
 
-  const lower = text.toLowerCase();
+  const lower =
+    cleanText(text).toLowerCase();
 
-  const places = Object.keys(GEO);
+  const places = [
+
+    'USA',
+    'United States',
+    'China',
+    'Japan',
+    'Vietnam',
+    'Brazil',
+    'Canada',
+    'Russia',
+    'Germany',
+    'France',
+    'India',
+
+    'Spain',
+    'Italy',
+    'Australia',
+    'Mexico',
+    'Argentina',
+    'Chile',
+    'Peru',
+    'Taiwan',
+    'Thailand',
+    'Korea',
+    'South Korea',
+    'England',
+    'UK',
+    'Sudan'
+  ];
 
   for (const place of places) {
 
     if (
-      lower.includes(place.toLowerCase())
+      lower.includes(
+        place.toLowerCase()
+      )
     ) {
       return place;
     }
   }
 
-  return 'USA';
+  return null;
 }
 
 // =========================
@@ -241,12 +323,15 @@ async function enrichItem(item) {
     extractPlace(text);
 
   const geo =
-    GEO[location] || GEO['USA'];
+    GEO[location] || {
+      lat: 0,
+      lng: 0
+    };
 
   return {
 
     id: slugHash(
-      `${item.title}-${location}`
+      `${item.title}-${location || 'unknown'}`
     ),
 
     title: item.title,
@@ -257,9 +342,11 @@ async function enrichItem(item) {
 
     publishedAt: item.publishedAt,
 
-    location,
+    location:
+      location || 'Unknown',
 
-    displayName: location,
+    displayName:
+      location || 'Unknown',
 
     lat: geo.lat,
 
@@ -269,7 +356,8 @@ async function enrichItem(item) {
 
     risk: extractRisk(text),
 
-    summary: cleanText(text).slice(0, 220)
+    summary: cleanText(text)
+      .slice(0, 220)
   };
 }
 
@@ -348,7 +436,10 @@ async function refreshData() {
           x.risk === 'Nguy hiểm'
       ).length,
 
-    sources: FEEDS.length
+    sources:
+      new Set(
+        enriched.map(x => x.source)
+      ).size
   };
 
   console.log(
@@ -408,3 +499,4 @@ app.listen(PORT, async () => {
 
   }, 10 * 60 * 1000);
 });
+```
