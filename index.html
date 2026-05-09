@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hanta Monitor AI</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">Realtime public health dashboard</div>
+      <h1>Hanta Monitor AI</h1>
+      <p>Đọc tin thật từ nguồn công khai, tự động trích xuất vị trí và cập nhật bản đồ.</p>
+    </div>
+    <div class="actions">
+      <button id="refreshBtn">Cập nhật ngay</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stats">
+      <div class="card">
+        <span>Tin đã xử lý</span>
+        <strong id="totalItems">0</strong>
+      </div>
+      <div class="card">
+        <span>Vùng nguy cơ cao</span>
+        <strong id="highRisk">0</strong>
+      </div>
+      <div class="card">
+        <span>Cập nhật gần nhất</span>
+        <strong id="updatedAt">—</strong>
+      </div>
+    </section>
+
+    <section class="content">
+      <div id="map" class="map"></div>
+
+      <aside class="sidebar">
+        <div class="panel">
+          <h2>Danh sách phát hiện</h2>
+          <p class="hint">Bấm vào từng dòng để mở nguồn bài báo.</p>
+          <div id="items" class="items"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

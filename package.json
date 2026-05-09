@@ -1,0 +1,19 @@
+{
+  "name": "hanta-realtime-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Realtime Hanta outbreak monitor with Node.js and Leaflet",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "rss-parser": "^3.13.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
