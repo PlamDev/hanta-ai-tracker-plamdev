@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const Parser = require('rss-parser');
 const path = require('path');
-const fs = require('fs');
 const crypto = require('crypto');
 
 const app = express();
@@ -10,38 +9,11 @@ const parser = new Parser();
 
 const PORT = process.env.PORT || 3000;
 
-// =========================
-// PATH
-// =========================
-
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const GEO_CACHE_FILE = path.join(__dirname, '.geo-cache.json');
-
-// =========================
-// MIDDLEWARE
-// =========================
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
-
-// =========================
-// GEO CACHE
-// =========================
-
-let geoCache = {};
-
-try {
-  geoCache = JSON.parse(
-    fs.readFileSync(GEO_CACHE_FILE, 'utf8')
-  );
-} catch {
-  geoCache = {};
-}
-
-// =========================
-// APP STATE
-// =========================
 
 const state = {
   updatedAt: null,
@@ -58,66 +30,76 @@ const state = {
 // =========================
 
 const FEEDS = [
- {
+  {
     name: 'Google News Hantavirus',
-    type: 'rss',
     url: 'https://news.google.com/rss/search?q=hantavirus+outbreak'
   },
   {
     name: 'Google News Virus',
-    type: 'rss',
     url: 'https://news.google.com/rss/search?q=virus+outbreak'
   },
   {
-    name: 'Google News Epidemic',
-    type: 'rss',
-    url: 'https://news.google.com/rss/search?q=epidemic'
-  },
-  {
     name: 'WHO News',
-    type: 'rss',
     url: 'https://www.who.int/rss-feeds/news-english.xml'
   }
 ];
 
 // =========================
-// KNOWN PLACES
+// STATIC MAP
 // =========================
 
-const KNOWN_PLACES = [
-  'Vietnam',
-  'Việt Nam',
-  'Hanoi',
-  'Ha Noi',
-  'Hà Nội',
-  'Da Nang',
-  'Đà Nẵng',
-  'Hue',
-  'Huế',
-  'Tokyo',
-  'Osaka',
-  'Japan',
-  'China',
-  'Taiwan',
-  'Korea',
-  'South Korea',
-  'Seoul',
-  'Busan',
-  'USA',
-  'United States',
-  'Canada',
-  'Mexico',
-  'Brazil',
-  'Chile',
-  'Argentina',
-  'Peru',
-  'France',
-  'Germany',
-  'Italy',
-  'Spain',
-  'England',
-  'UK'
-];
+const GEO = {
+
+  USA: {
+    lat: 37.0902,
+    lng: -95.7129
+  },
+
+  China: {
+    lat: 35.8617,
+    lng: 104.1954
+  },
+
+  Japan: {
+    lat: 36.2048,
+    lng: 138.2529
+  },
+
+  Vietnam: {
+    lat: 14.0583,
+    lng: 108.2772
+  },
+
+  Brazil: {
+    lat: -14.2350,
+    lng: -51.9253
+  },
+
+  Canada: {
+    lat: 56.1304,
+    lng: -106.3468
+  },
+
+  Russia: {
+    lat: 61.5240,
+    lng: 105.3188
+  },
+
+  Germany: {
+    lat: 51.1657,
+    lng: 10.4515
+  },
+
+  France: {
+    lat: 46.2276,
+    lng: 2.2137
+  },
+
+  India: {
+    lat: 20.5937,
+    lng: 78.9629
+  }
+};
 
 // =========================
 // HELPERS
@@ -148,6 +130,7 @@ function extractCases(text) {
   ];
 
   for (const p of patterns) {
+
     const m = text.match(p);
 
     if (m) {
@@ -179,64 +162,25 @@ function extractRisk(text) {
     return 'Cao';
   }
 
-  if (
-    lower.includes('confirmed') ||
-    lower.includes('reported')
-  ) {
-    return 'Trung bình';
-  }
-
-  return 'Thấp';
+  return 'Trung bình';
 }
 
 function extractPlace(text) {
 
-  const normalized = cleanText(text);
+  const lower = text.toLowerCase();
 
-  const places = [
-    'China',
-    'USA',
-    'United States',
-    'Canada',
-    'Mexico',
-    'Brazil',
-    'Argentina',
-    'Chile',
-    'Peru',
-    'Vietnam',
-    'Japan',
-    'Tokyo',
-    'Seoul',
-    'Taiwan',
-    'Thailand',
-    'Germany',
-    'France',
-    'Italy',
-    'Spain',
-    'London',
-    'England',
-    'Russia',
-    'India'
-  ];
+  const places = Object.keys(GEO);
 
   for (const place of places) {
 
     if (
-      normalized
-        .toLowerCase()
-        .includes(place.toLowerCase())
+      lower.includes(place.toLowerCase())
     ) {
       return place;
     }
   }
 
   return 'USA';
-}
-function articleSummary(item) {
-
-  return cleanText(
-    `${item.title} ${item.snippet}`
-  ).slice(0, 220);
 }
 
 // =========================
@@ -247,38 +191,36 @@ async function fetchRssFeed(feed) {
 
   try {
 
-    const res = await fetch(feed.url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0'
-      }
-    });
-
-    const xml = await res.text();
-
-    const parsed = await parser.parseString(xml);
+    const parsed =
+      await parser.parseURL(feed.url);
 
     return (parsed.items || [])
       .slice(0, 20)
       .map((item) => ({
+
         title: cleanText(item.title),
+
         url: item.link,
+
         publishedAt:
           item.isoDate ||
           item.pubDate ||
           null,
+
         snippet: cleanText(
           item.contentSnippet ||
           item.content ||
           item.summary ||
           ''
         ),
+
         source: feed.name
       }));
 
   } catch (err) {
 
     console.log(
-      'RSS FETCH ERROR:',
+      'RSS ERROR:',
       err.message
     );
 
@@ -287,83 +229,7 @@ async function fetchRssFeed(feed) {
 }
 
 // =========================
-// GEOCODING
-// =========================
-
-async function geocodePlace(place) {
-
-  if (!place) return null;
-
-  if (geoCache[place]) {
-    return geoCache[place];
-  }
-
-  try {
-
-    const url = new URL(
-      'https://nominatim.openstreetmap.org/search'
-    );
-
-    url.searchParams.set(
-      'format',
-      'jsonv2'
-    );
-
-    url.searchParams.set(
-      'limit',
-      '1'
-    );
-
-    url.searchParams.set(
-      'q',
-      place
-    );
-
-    const res = await fetch(url, {
-      headers: {
-        'accept': 'application/json',
-        'user-agent':
-          'HantaRealtimeApp/1.0'
-      }
-    });
-
-    const data = await res.json();
-
-    if (!Array.isArray(data)) {
-      return null;
-    }
-
-    if (data.length === 0) {
-      return null;
-    }
-
-    const first = data[0];
-
-    const result = {
-      lat: Number(first.lat),
-      lng: Number(first.lon),
-      displayName:
-        first.display_name || place
-    };
-
-    geoCache[place] = result;
-
-    fs.writeFileSync(
-      GEO_CACHE_FILE,
-      JSON.stringify(geoCache, null, 2)
-    );
-
-    return result;
-
-  } catch {
-
-    return null;
-
-  }
-}
-
-// =========================
-// AI ENRICH
+// ENRICH
 // =========================
 
 async function enrichItem(item) {
@@ -374,18 +240,11 @@ async function enrichItem(item) {
   const location =
     extractPlace(text);
 
-  if (!location) {
-    return null;
-  }
-
   const geo =
-    await geocodePlace(location);
-
-  if (!geo) {
-    return null;
-  }
+    GEO[location] || GEO['USA'];
 
   return {
+
     id: slugHash(
       `${item.title}-${location}`
     ),
@@ -400,7 +259,7 @@ async function enrichItem(item) {
 
     location,
 
-    displayName: geo.displayName,
+    displayName: location,
 
     lat: geo.lat,
 
@@ -410,12 +269,12 @@ async function enrichItem(item) {
 
     risk: extractRisk(text),
 
-    summary: articleSummary(item)
+    summary: cleanText(text).slice(0, 220)
   };
 }
 
 // =========================
-// REFRESH DATA
+// REFRESH
 // =========================
 
 async function refreshData() {
@@ -433,10 +292,7 @@ async function refreshData() {
 
     } catch (err) {
 
-      console.log(
-        'Feed Error:',
-        err.message
-      );
+      console.log(err.message);
 
     }
   }
@@ -446,8 +302,7 @@ async function refreshData() {
   for (const item of raw) {
 
     const key =
-      item.url ||
-      item.title;
+      item.url || item.title;
 
     if (!dedup.has(key)) {
       dedup.set(key, item);
@@ -458,23 +313,10 @@ async function refreshData() {
 
   for (const item of dedup.values()) {
 
-    try {
+    const result =
+      await enrichItem(item);
 
-      const result =
-        await enrichItem(item);
-
-      if (result) {
-        enriched.push(result);
-      }
-
-    } catch (err) {
-
-      console.log(
-        'Enrich Error:',
-        err.message
-      );
-
-    }
+    enriched.push(result);
   }
 
   enriched.sort((a, b) => {
@@ -496,6 +338,7 @@ async function refreshData() {
     new Date().toISOString();
 
   state.stats = {
+
     totalItems: enriched.length,
 
     highRisk:
@@ -509,52 +352,8 @@ async function refreshData() {
   };
 
   console.log(
-    `Updated: ${enriched.length} outbreaks`
+    `Updated ${enriched.length} outbreaks`
   );
-
-  return state;
-}
-
-// =========================
-// AUTO REFRESH
-// =========================
-
-let refreshing = false;
-
-async function refreshIfNeeded(
-  force = false
-) {
-
-  if (refreshing) {
-    return state;
-  }
-
-  const stale =
-    !state.updatedAt ||
-    (
-      Date.now() -
-      new Date(state.updatedAt).getTime()
-    ) > 10 * 60 * 1000;
-
-  if (
-    !force &&
-    !stale &&
-    state.items.length > 0
-  ) {
-    return state;
-  }
-
-  refreshing = true;
-
-  try {
-
-    await refreshData();
-
-  } finally {
-
-    refreshing = false;
-
-  }
 
   return state;
 }
@@ -563,30 +362,20 @@ async function refreshIfNeeded(
 // API
 // =========================
 
+app.get('/api/outbreaks', async (req, res) => {
+
+  await refreshData();
+
+  res.json(state);
+});
+
 app.get('/api/health', (req, res) => {
 
   res.json({
     ok: true,
     updatedAt: state.updatedAt,
-    items: state.items.length
+    total: state.items.length
   });
-
-});
-
-app.get('/api/outbreaks', async (req, res) => {
-
-  await refreshIfNeeded(false);
-
-  res.json(state);
-
-});
-
-app.post('/api/refresh', async (req, res) => {
-
-  await refreshIfNeeded(true);
-
-  res.json(state);
-
 });
 
 // =========================
@@ -598,7 +387,6 @@ app.get('*', (req, res) => {
   res.sendFile(
     path.join(PUBLIC_DIR, 'index.html')
   );
-
 });
 
 // =========================
@@ -608,16 +396,15 @@ app.get('*', (req, res) => {
 app.listen(PORT, async () => {
 
   console.log(
-    `Server running on port ${PORT}`
+    `Server running on ${PORT}`
   );
 
-  await refreshIfNeeded(true);
+  await refreshData();
 
   setInterval(() => {
 
-    refreshIfNeeded(false)
-      .catch(() => {});
+    refreshData()
+      .catch(console.error);
 
   }, 10 * 60 * 1000);
-
 });
