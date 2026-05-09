@@ -1,4 +1,3 @@
-```js
 const express = require('express');
 const cors = require('cors');
 const Parser = require('rss-parser');
@@ -149,6 +148,26 @@ const GEO = {
   Sudan: {
     lat: 12.8628,
     lng: 30.2176
+  },
+
+  Korea: {
+    lat: 36.5,
+    lng: 127.8
+  },
+
+  'South Korea': {
+    lat: 36.5,
+    lng: 127.8
+  },
+
+  UK: {
+    lat: 55.3781,
+    lng: -3.4360
+  },
+
+  England: {
+    lat: 52.3555,
+    lng: -1.1743
   }
 };
 
@@ -157,14 +176,16 @@ const GEO = {
 // =========================
 
 function slugHash(text) {
+
   return crypto
     .createHash('sha1')
-    .update(text)
+    .update(String(text))
     .digest('hex')
     .slice(0, 12);
 }
 
 function cleanText(value) {
+
   return String(value || '')
     .replace(/\s+/g, ' ')
     .replace(/<[^>]*>/g, ' ')
@@ -221,48 +242,18 @@ function extractPlace(text) {
   const lower =
     cleanText(text).toLowerCase();
 
-  const places = [
-
-    'USA',
-    'United States',
-    'China',
-    'Japan',
-    'Vietnam',
-    'Brazil',
-    'Canada',
-    'Russia',
-    'Germany',
-    'France',
-    'India',
-
-    'Spain',
-    'Italy',
-    'Australia',
-    'Mexico',
-    'Argentina',
-    'Chile',
-    'Peru',
-    'Taiwan',
-    'Thailand',
-    'Korea',
-    'South Korea',
-    'England',
-    'UK',
-    'Sudan'
-  ];
+  const places = Object.keys(GEO);
 
   for (const place of places) {
 
     if (
-      lower.includes(
-        place.toLowerCase()
-      )
+      lower.includes(place.toLowerCase())
     ) {
       return place;
     }
   }
 
-  return null;
+  return 'USA';
 }
 
 // =========================
@@ -317,7 +308,9 @@ async function fetchRssFeed(feed) {
 async function enrichItem(item) {
 
   const text =
-    `${item.title || ''} ${item.snippet || ''}`;
+    String(item.title || '') +
+    ' ' +
+    String(item.snippet || '');
 
   const location =
     extractPlace(text);
@@ -328,7 +321,9 @@ async function enrichItem(item) {
   return {
 
     id: slugHash(
-      `${item.title}-${location}`
+      String(item.title || '') +
+      '-' +
+      String(location || '')
     ),
 
     title: item.title,
@@ -354,6 +349,7 @@ async function enrichItem(item) {
     summary: cleanText(text).slice(0, 220)
   };
 }
+
 // =========================
 // REFRESH
 // =========================
@@ -374,7 +370,6 @@ async function refreshData() {
     } catch (err) {
 
       console.log(err.message);
-
     }
   }
 
@@ -436,7 +431,9 @@ async function refreshData() {
   };
 
   console.log(
-    `Updated ${enriched.length} outbreaks`
+    'Updated ' +
+    enriched.length +
+    ' outbreaks'
   );
 
   return state;
@@ -448,9 +445,20 @@ async function refreshData() {
 
 app.get('/api/outbreaks', async (req, res) => {
 
-  await refreshData();
+  try {
 
-  res.json(state);
+    await refreshData();
+
+    res.json(state);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: 'Failed to refresh outbreaks'
+    });
+  }
 });
 
 app.get('/api/health', (req, res) => {
@@ -480,10 +488,17 @@ app.get('*', (req, res) => {
 app.listen(PORT, async () => {
 
   console.log(
-    `Server running on ${PORT}`
+    'Server running on port ' + PORT
   );
 
-  await refreshData();
+  try {
+
+    await refreshData();
+
+  } catch (err) {
+
+    console.error(err);
+  }
 
   setInterval(() => {
 
@@ -492,4 +507,3 @@ app.listen(PORT, async () => {
 
   }, 10 * 60 * 1000);
 });
-```
